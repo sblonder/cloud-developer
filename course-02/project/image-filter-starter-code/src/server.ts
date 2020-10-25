@@ -9,15 +9,12 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
 
   // Set the network port
   const port = process.env.PORT || 8082;
-  
+
   // Use the body parser middleware for post requests
   app.use(bodyParser.json());
 
-  // @TODO1 IMPLEMENT A RESTFUL ENDPOINT
   // GET /filteredimage?image_url={{URL}}
   // endpoint to filter an image from a public url.
-  // IT SHOULD
-  //    1
   //    1. validate the image_url query
   //    2. call filterImageFromURL(image_url) to filter the image
   //    3. send the resulting file in the response
@@ -26,17 +23,51 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
   //    image_url: URL of a publicly accessible image
   // RETURNS
   //   the filtered image file [!!TIP res.sendFile(filteredpath); might be useful]
+  app.get("/filteredimage", async(req, res) => {
 
-  /**************************************************************************** */
+    // Log:
+    console.log("Got filteredimage request with: ", req.query);
 
-  //! END @TODO1
-  
+    // Sanity:
+    if (!('image_url' in req.query)) {
+      return res.status(400).send("image_url is required");
+    }
+
+    // Filter the image:
+    try {
+      var filteredImage = await filterImageFromURL(req.query.image_url);
+    } catch (err) {
+      console.log("Error: ", err);
+      return res.status(400).send("Could not process " + req.query.image_url);
+    }
+
+    // Log:
+    console.log("Saved filtered image locally at: ", filteredImage);
+
+    // Send filtered image:
+    res.sendFile(filteredImage, null, function(err) {
+
+      // Cleanup:
+      deleteLocalFiles([filteredImage]);
+
+      // Return result:
+      if (err) {
+        console.log("Error sending file: ", err);
+        return res.status(500).send("Internal error");
+      } else {
+        console.log("File sent: ", filteredImage);
+      }
+
+    });
+
+  });
+
   // Root Endpoint
   // Displays a simple message to the user
   app.get( "/", async ( req, res ) => {
     res.send("try GET /filteredimage?image_url={{}}")
   } );
-  
+
 
   // Start the Server
   app.listen( port, () => {
